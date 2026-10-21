@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consumers</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; color: #1f2933; }
+    h1 { margin: 0 0 12px; font-size: 1.4rem; }
+    form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    input { padding: 6px 8px; border: 1px solid #b8c0cc; border-radius: 4px; min-width: 150px; }
+    .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e4e7eb; }
+    th { background: #f5f7fa; position: sticky; top: 0; }
+    #users tbody tr { cursor: pointer; }
+    #users tbody tr:hover { background: #f0f4f8; }
+    #users tbody tr.selected { background: #dceefb; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pager { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+    aside { border: 1px solid #e4e7eb; border-radius: 6px; padding: 12px; }
+    aside h2 { margin: 0 0 8px; font-size: 1.1rem; }
+    .muted { color: #6b7785; }
+  </style>
+</head>
+<body>
+  <h1>Consumers</h1>
+
+  <form id="filters" autocomplete="off">
+    <input id="first_name" placeholder="First name">
+    <input id="last_name" placeholder="Last name">
+    <input id="email" placeholder="Email">
+    <input id="country" placeholder="Country">
+  </form>
+
+  <div class="layout">
+    <section>
+      <table id="users">
+        <thead>
+          <tr><th>First name</th><th>Last name</th><th>Email</th><th>Country</th><th>City</th><th>Plan</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="pager">
+        <button id="prev" type="button">Previous</button>
+        <button id="next" type="button">Next</button>
+        <span id="summary" class="muted"></span>
+      </div>
+    </section>
+
+    <aside>
+      <h2 id="orders-title">Orders</h2>
+      <p id="orders-hint" class="muted">Select a consumer to see their orders.</p>
+      <table id="orders" hidden>
+        <thead>
+          <tr><th>Date</th><th>Category</th><th>Status</th><th class="num">Amount</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </aside>
+  </div>
+
+  <script>
+    const PAGE = 25;
+    const fields = ["first_name", "last_name", "email", "country"];
+    const $ = (id) => document.getElementById(id);
+    let offset = 0, selectedId = null, timer, usersReq = 0, ordersReq = 0;
+
+    function cell(text, cls) {
+      const td = document.createElement("td");
+      td.textContent = text ?? "";
+      if (cls) td.className = cls;
+      return td;
+    }
+
+    async function loadUsers() {
+      const myReq = ++usersReq;
+      const params = new URLSearchParams({ limit: PAGE, offset });
+      for (const f of fields) {
+        const v = $(f).value.trim();
+        if (v) params.set(f, v);
+      }
+      const res = await fetch("/api/users?" + params);
+      if (myReq !== usersReq) return; // a newer request replaced this one
+      if (!res.ok) { $("summary").textContent = "Failed to load consumers."; return; }
+
+      const { total, rows } = await res.json();
+      const tbody = $("users").tBodies[0];
+      tbody.replaceChildren();
+      for (const u of rows) {
+        const tr = document.createElement("tr");
+        tr.tabIndex = 0;
+        if (u.user_id === selectedId) tr.classList.add("selected");
+        tr.append(cell(u.first_name), cell(u.last_name), cell(u.email),
+                  cell(u.country), cell(u.city), cell(u.subscription));
+        const pick = () => selectUser(u, tr);
+        tr.addEventListener("click", pick);
+        tr.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
+        tbody.append(tr);
+      }
+      $("summary").textContent = total
+        ? `${offset + 1}–${offset + rows.length} of ${total}`
+        : "No consumers found";
+      $("prev").disabled = offset === 0;
+      $("next").disabled = offset + rows.length >= total;
+    }
+
+    async function selectUser(user, tr) {
+      selectedId = user.user_id;
+      document.querySelectorAll("#users tr.selected").forEach((r) => r.classList.remove("selected"));
+      tr.classList.add("selected");
+      $("orders-title").textContent = `Orders: ${user.first_name} ${user.last_name}`;
+      $("orders-hint").hidden = false;
+      $("orders-hint").textContent = "Loading...";
+      $("orders").hidden = true;
+
+      const myReq = ++ordersReq;
+      const res = await fetch("/api/orders?user_id=" + user.user_id);
+      if (myReq !== ordersReq) return;
+      if (!res.ok) { $("orders-hint").textContent = "Failed to load orders."; return; }
+
+      const orders = await res.json();
+      if (!orders.length) { $("orders-hint").textContent = "This consumer has no orders."; return; }
+
+      const tbody = $("orders").tBodies[0];
+      tbody.replaceChildren();
+      let sum = 0;
+      for (const o of orders) {
+        sum += o.amount;
+        const tr2 = document.createElement("tr");
+        tr2.append(cell(o.order_date), cell(o.product_category), cell(o.status),
+                   cell(o.amount.toFixed(2), "num"));
+        tbody.append(tr2);
+      }
+      $("orders-hint").textContent = `${orders.length} orders, total ${sum.toFixed(2)}`;
+      $("orders").hidden = false;
+    }
+
+    $("filters").addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { offset = 0; loadUsers(); }, 300);
+    });
+    $("filters").addEventListener("submit", (e) => e.preventDefault());
+    $("prev").addEventListener("click", () => { offset = Math.max(offset - PAGE, 0); loadUsers(); });
+    $("next").addEventListener("click", () => { offset += PAGE; loadUsers(); });
+
+    loadUsers();
+  </script>
+</body>
+</html>
