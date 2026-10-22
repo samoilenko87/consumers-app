@@ -55,7 +55,14 @@
     }
     .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 20px 56px; }
 
-    header { margin-bottom: 28px; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
     h1 {
       margin: 0 0 6px;
       font-size: clamp(2rem, 5vw, 3.25rem);
@@ -65,17 +72,8 @@
     }
     .sub { margin: 0; color: var(--muted); font-size: 1.05rem; }
 
-    /* Filters: pill inputs */
-    form#filters {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    @media (max-width: 900px) { form#filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 520px) { form#filters { grid-template-columns: 1fr; } }
-
-    input[type="text"] {
+    /* Inputs: pills */
+    input, select, textarea {
       width: 100%;
       height: 52px;
       padding: 0 22px;
@@ -87,9 +85,20 @@
       outline: none;
       transition: border-color .15s, background .15s;
     }
-    input[type="text"]::placeholder { color: var(--muted); }
-    input[type="text"]:hover { background: var(--surface-hover); }
-    input[type="text"]:focus { border-color: var(--primary); background: var(--bg); }
+    textarea { height: auto; padding: 14px 22px; border-radius: 24px; resize: vertical; }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    input:hover, select:hover, textarea:hover { background: var(--surface-hover); }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); background: var(--bg); }
+
+    /* Filters */
+    form#filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 900px) { form#filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 520px) { form#filters { grid-template-columns: 1fr; } }
 
     /* Buttons: pills */
     button {
@@ -113,7 +122,6 @@
     button.secondary { background: var(--surface); color: var(--text); }
     button.secondary:hover:not(:disabled) { background: var(--surface-hover); opacity: 1; }
     button:disabled { opacity: .35; cursor: not-allowed; }
-    button.ghost { height: 52px; }
 
     /* Layout */
     .layout {
@@ -186,6 +194,13 @@
       font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
       font-variant-numeric: tabular-nums; margin: 0 0 4px;
     }
+    button.on-dark {
+      height: 44px;
+      padding: 0 22px;
+      margin: 0 0 18px;
+      background: var(--dark-panel-text);
+      color: var(--dark-panel);
+    }
     #orders th { color: var(--dark-panel-muted); padding-left: 0; padding-right: 0; }
     #orders td { padding: 12px 0; border-top: 1px solid var(--dark-panel-line); white-space: normal; }
     #orders td.num { padding-left: 12px; }
@@ -196,21 +211,70 @@
     .orders-scroll { max-height: 60vh; overflow-y: auto; }
 
     .empty { padding: 28px 16px; color: var(--muted); text-align: center; }
+
+    /* Dialogs */
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      padding: 28px;
+      width: min(620px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .35);
+    }
+    dialog::backdrop { background: rgba(0, 0, 0, .55); }
+    dialog h2 { margin: 0 0 4px; font-size: 1.5rem; letter-spacing: -0.02em; }
+    dialog .lead { margin: 0 0 20px; color: var(--muted); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+    @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
+    .span2 { grid-column: 1 / -1; }
+    .field label {
+      display: block;
+      margin: 0 0 6px 14px;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+    .form-error { min-height: 1.4em; margin: 14px 0 0 4px; color: var(--bad-text); font-weight: 600; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translate(-50%, 20px);
+      padding: 12px 22px;
+      border-radius: var(--radius-pill);
+      background: var(--primary);
+      color: var(--primary-text);
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      z-index: 10;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <h1>Consumers</h1>
-      <p class="sub">Find a consumer, then open their orders.</p>
-    </header>
+    <div class="top">
+      <div>
+        <h1>Consumers</h1>
+        <p class="sub">Find a consumer, then open their orders.</p>
+      </div>
+      <button id="add-consumer" type="button">Add consumer</button>
+    </div>
 
     <form id="filters" autocomplete="off">
       <input type="text" id="first_name" placeholder="First name" aria-label="First name">
       <input type="text" id="last_name" placeholder="Last name" aria-label="Last name">
       <input type="text" id="email" placeholder="Email" aria-label="Email">
       <input type="text" id="country" placeholder="Country" aria-label="Country">
-      <button type="button" id="reset" class="secondary ghost">Clear</button>
+      <button type="button" id="reset" class="secondary">Clear</button>
     </form>
 
     <div class="layout">
@@ -236,6 +300,7 @@
       <aside aria-live="polite">
         <h2 id="orders-title">Orders</h2>
         <p id="orders-hint">Select a consumer to see their orders.</p>
+        <button id="add-order" type="button" class="on-dark" disabled>Add order</button>
         <p id="orders-total" hidden></p>
         <div class="orders-scroll">
           <table id="orders" hidden>
@@ -249,11 +314,183 @@
     </div>
   </div>
 
+  <!-- Admin key -->
+  <dialog id="key-dialog">
+    <form method="dialog">
+      <h2>Admin key</h2>
+      <p class="lead">Enter the key to add records. It is kept only until you close this tab.</p>
+      <div class="field">
+        <label for="key-input">Key</label>
+        <input id="key-input" type="password" required autocomplete="off" autofocus>
+      </div>
+      <div class="actions">
+        <button value="cancel" class="secondary" formnovalidate>Cancel</button>
+        <button value="ok">Unlock</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Add consumer -->
+  <dialog id="consumer-dialog">
+    <form id="consumer-form">
+      <h2>Add consumer</h2>
+      <p class="lead">Registration date, referral code and login count are set automatically.</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="c_first_name">First name *</label>
+          <input id="c_first_name" type="text" required maxlength="100" autofocus>
+        </div>
+        <div class="field">
+          <label for="c_last_name">Last name *</label>
+          <input id="c_last_name" type="text" required maxlength="100">
+        </div>
+        <div class="field span2">
+          <label for="c_email">Email *</label>
+          <input id="c_email" type="email" required maxlength="254">
+        </div>
+        <div class="field">
+          <label for="c_dob">Date of birth *</label>
+          <input id="c_dob" type="date" required min="1900-01-01">
+        </div>
+        <div class="field">
+          <label for="c_gender">Gender</label>
+          <select id="c_gender">
+            <option value="">Not specified</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="c_country">Country *</label>
+          <input id="c_country" type="text" required maxlength="100">
+        </div>
+        <div class="field">
+          <label for="c_city">City *</label>
+          <input id="c_city" type="text" required maxlength="100">
+        </div>
+        <div class="field">
+          <label for="c_phone">Phone</label>
+          <input id="c_phone" type="text" maxlength="25" placeholder="+380 ...">
+        </div>
+        <div class="field">
+          <label for="c_subscription">Subscription</label>
+          <input id="c_subscription" type="text" maxlength="30" list="plans">
+          <datalist id="plans"><option value="Free"><option value="Basic"></datalist>
+        </div>
+        <div class="field span2">
+          <label for="c_balance">Account balance</label>
+          <input id="c_balance" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="field span2">
+          <label for="c_notes">Notes</label>
+          <textarea id="c_notes" rows="3" maxlength="500"></textarea>
+        </div>
+      </div>
+      <p id="consumer-error" class="form-error" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="secondary" data-close="consumer-dialog">Cancel</button>
+        <button type="submit" id="consumer-submit">Save consumer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Add order -->
+  <dialog id="order-dialog">
+    <form id="order-form">
+      <h2>Add order</h2>
+      <p class="lead" id="order-for"></p>
+      <div class="grid2">
+        <div class="field">
+          <label for="o_date">Order date *</label>
+          <input id="o_date" type="date" required autofocus>
+        </div>
+        <div class="field">
+          <label for="o_amount">Amount *</label>
+          <input id="o_amount" type="number" required min="0.01" max="1000000" step="0.01">
+        </div>
+        <div class="field">
+          <label for="o_category">Category *</label>
+          <select id="o_category" required>
+            <option>Books</option>
+            <option>Clothing</option>
+            <option>Electronics</option>
+            <option>Home</option>
+            <option>Sports</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="o_status">Status *</label>
+          <select id="o_status" required>
+            <option>Pending</option>
+            <option>Completed</option>
+            <option>Cancelled</option>
+            <option>Refunded</option>
+          </select>
+        </div>
+      </div>
+      <p id="order-error" class="form-error" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="secondary" data-close="order-dialog">Cancel</button>
+        <button type="submit" id="order-submit">Save order</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
   <script>
     const PAGE = 25;
     const fields = ["first_name", "last_name", "email", "country"];
     const $ = (id) => document.getElementById(id);
-    let offset = 0, selectedId = null, timer, usersReq = 0, ordersReq = 0;
+    let offset = 0, selectedId = null, selectedUser = null;
+    let timer, usersReq = 0, ordersReq = 0, toastTimer;
+
+    /* ---------- admin key (kept for this tab only) ---------- */
+    const KEY_NAME = "adminKey";
+    let memoryKey = "";
+    function getKey() {
+      try { return sessionStorage.getItem(KEY_NAME) || memoryKey; } catch { return memoryKey; }
+    }
+    function setKey(k) {
+      memoryKey = k;
+      try { sessionStorage.setItem(KEY_NAME, k); } catch {}
+    }
+    function clearKey() {
+      memoryKey = "";
+      try { sessionStorage.removeItem(KEY_NAME); } catch {}
+    }
+
+    function askKey() {
+      return new Promise((resolve) => {
+        const dlg = $("key-dialog");
+        $("key-input").value = "";
+        dlg.returnValue = "";
+        const done = () => {
+          dlg.removeEventListener("close", done);
+          const value = dlg.returnValue === "ok" ? $("key-input").value.trim() : "";
+          if (value) setKey(value);
+          resolve(value || null);
+        };
+        dlg.addEventListener("close", done);
+        dlg.showModal();
+      });
+    }
+
+    /* ---------- helpers ---------- */
+    function todayLocal() {
+      const d = new Date();
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 10);
+    }
+
+    function toast(message) {
+      const t = $("toast");
+      t.textContent = message;
+      t.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("show"), 3500);
+    }
 
     function cell(text, cls) {
       const td = document.createElement("td");
@@ -275,10 +512,43 @@
       const s = String(status || "").toLowerCase();
       if (s === "completed") return "ok";
       if (s === "pending") return "warn";
-      if (s === "cancelled" || s === "canceled" || s === "failed") return "bad";
+      if (s === "cancelled" || s === "canceled" || s === "failed" || s === "refunded") return "bad";
       return "";
     }
 
+    /* POST helper: returns the parsed response on success, otherwise null
+       (and puts a readable message into errorEl). */
+    async function postJson(url, body, errorEl, submitBtn) {
+      if (!getKey() && !(await askKey())) return null;
+      submitBtn.disabled = true;
+      errorEl.textContent = "";
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-admin-key": getKey() },
+          body: JSON.stringify(body),
+        });
+        let data = null;
+        try { data = await res.json(); } catch {}
+        if (res.status === 401) {
+          clearKey();
+          errorEl.textContent = "The admin key was not accepted. Save again to re-enter it.";
+          return null;
+        }
+        if (!res.ok) {
+          errorEl.textContent = (data && data.error) || "Something went wrong. Please try again.";
+          return null;
+        }
+        return data;
+      } catch {
+        errorEl.textContent = "Network error. Please try again.";
+        return null;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    /* ---------- consumers list ---------- */
     async function loadUsers() {
       const myReq = ++usersReq;
       const params = new URLSearchParams({ limit: PAGE, offset });
@@ -302,6 +572,7 @@
       for (const u of rows) {
         const tr = document.createElement("tr");
         tr.tabIndex = 0;
+        tr.dataset.id = u.user_id;
         if (u.user_id === selectedId) tr.classList.add("selected");
         tr.append(
           cell(`${u.first_name ?? ""} ${u.last_name ?? ""}`.trim(), "name"),
@@ -324,10 +595,17 @@
       $("next").disabled = offset + rows.length >= total;
     }
 
-    async function selectUser(user, tr) {
+    /* ---------- orders panel ---------- */
+    function selectUser(user, tr) {
       selectedId = user.user_id;
+      selectedUser = user;
       document.querySelectorAll("#users tr.selected").forEach((r) => r.classList.remove("selected"));
-      tr.classList.add("selected");
+      if (tr) tr.classList.add("selected");
+      $("add-order").disabled = false;
+      return showOrders(user);
+    }
+
+    async function showOrders(user) {
       $("orders-title").textContent = `${user.first_name} ${user.last_name}`.trim();
       $("orders-hint").hidden = false;
       $("orders-hint").textContent = "Loading...";
@@ -346,27 +624,101 @@
       if (!res.ok) { $("orders-hint").textContent = "Failed to load orders."; return; }
 
       const orders = await res.json();
-      if (!orders.length) { $("orders-hint").textContent = "This consumer has no orders."; return; }
+      if (!orders.length) { $("orders-hint").textContent = "This consumer has no orders yet."; return; }
 
       const tbody = $("orders").tBodies[0];
       tbody.replaceChildren();
       let sum = 0;
       for (const o of orders) {
         sum += o.amount;
-        const tr2 = document.createElement("tr");
-        tr2.append(
+        const tr = document.createElement("tr");
+        tr.append(
           cell(o.order_date),
           cell(o.product_category),
           tagCell(o.status, statusClass(o.status)),
           cell(o.amount.toFixed(2), "num")
         );
-        tbody.append(tr2);
+        tbody.append(tr);
       }
       $("orders-total").textContent = sum.toFixed(2);
       $("orders-total").hidden = false;
       $("orders-hint").textContent = `${orders.length} orders in total`;
       $("orders").hidden = false;
     }
+
+    /* ---------- add consumer ---------- */
+    async function openAddConsumer() {
+      if (!getKey() && !(await askKey())) return;
+      $("consumer-form").reset();
+      $("consumer-error").textContent = "";
+      $("c_dob").max = todayLocal();
+      $("consumer-dialog").showModal();
+    }
+
+    $("consumer-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const map = {
+        first_name: "c_first_name", last_name: "c_last_name", email: "c_email",
+        date_of_birth: "c_dob", country: "c_country", city: "c_city",
+        gender: "c_gender", phone: "c_phone", subscription: "c_subscription",
+        notes: "c_notes",
+      };
+      const body = {};
+      for (const [key, id] of Object.entries(map)) {
+        const v = $(id).value.trim();
+        if (v) body[key] = v;
+      }
+      if ($("c_balance").value !== "") body.account_balance = Number($("c_balance").value);
+
+      const data = await postJson("/api/users", body, $("consumer-error"), $("consumer-submit"));
+      if (!data) return;
+
+      $("consumer-dialog").close();
+      for (const f of fields) $(f).value = "";
+      $("email").value = data.email;
+      offset = 0;
+      await loadUsers();
+      const row = [...$("users").tBodies[0].rows].find((r) => Number(r.dataset.id) === data.user_id);
+      if (row) row.click();
+      toast(`Consumer added (ID ${data.user_id})`);
+    });
+
+    /* ---------- add order ---------- */
+    async function openAddOrder() {
+      if (!selectedUser) return;
+      if (!getKey() && !(await askKey())) return;
+      $("order-form").reset();
+      $("order-error").textContent = "";
+      $("o_date").value = todayLocal();
+      $("o_date").max = todayLocal();
+      $("order-for").textContent =
+        `For ${selectedUser.first_name} ${selectedUser.last_name}`.trim() + ` (ID ${selectedUser.user_id})`;
+      $("order-dialog").showModal();
+    }
+
+    $("order-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const body = {
+        user_id: selectedUser.user_id,
+        order_date: $("o_date").value,
+        amount: Number($("o_amount").value),
+        status: $("o_status").value,
+        product_category: $("o_category").value,
+      };
+      const data = await postJson("/api/orders", body, $("order-error"), $("order-submit"));
+      if (!data) return;
+
+      $("order-dialog").close();
+      await showOrders(selectedUser);
+      toast(`Order added (ID ${data.order_id})`);
+    });
+
+    /* ---------- wiring ---------- */
+    document.querySelectorAll("[data-close]").forEach((btn) => {
+      btn.addEventListener("click", () => $(btn.dataset.close).close());
+    });
+    $("add-consumer").addEventListener("click", openAddConsumer);
+    $("add-order").addEventListener("click", openAddOrder);
 
     $("filters").addEventListener("input", () => {
       clearTimeout(timer);
