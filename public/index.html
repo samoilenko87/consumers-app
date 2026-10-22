@@ -3,62 +3,250 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>Consumers</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; color: #1f2933; }
-    h1 { margin: 0 0 12px; font-size: 1.4rem; }
-    form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    input { padding: 6px 8px; border: 1px solid #b8c0cc; border-radius: 4px; min-width: 150px; }
-    .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
-    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e4e7eb; }
-    th { background: #f5f7fa; position: sticky; top: 0; }
-    #users tbody tr { cursor: pointer; }
-    #users tbody tr:hover { background: #f0f4f8; }
-    #users tbody tr.selected { background: #dceefb; }
-    td.num { text-align: right; font-variant-numeric: tabular-nums; }
-    .pager { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-    aside { border: 1px solid #e4e7eb; border-radius: 6px; padding: 12px; }
-    aside h2 { margin: 0 0 8px; font-size: 1.1rem; }
-    .muted { color: #6b7785; }
+    :root {
+      --bg: #ffffff;
+      --surface: #f4f4f5;
+      --surface-hover: #ebebed;
+      --text: #0b0b0c;
+      --muted: #75757d;
+      --line: #e6e6e9;
+      --primary: #0b0b0c;
+      --primary-text: #ffffff;
+      --dark-panel: #0b0b0c;
+      --dark-panel-text: #ffffff;
+      --dark-panel-muted: #9a9aa3;
+      --dark-panel-line: #26262a;
+      --ok-bg: #dcf5e4;   --ok-text: #11693a;
+      --warn-bg: #fff0cc; --warn-text: #7a5300;
+      --bad-bg: #fde0e0;  --bad-text: #a31a1a;
+      --radius-card: 28px;
+      --radius-pill: 999px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --surface: #141416;
+        --surface-hover: #1d1d20;
+        --text: #f5f5f6;
+        --muted: #8e8e97;
+        --line: #26262a;
+        --primary: #ffffff;
+        --primary-text: #0b0b0c;
+        --dark-panel: #1d1d20;
+        --dark-panel-line: #2e2e33;
+        --ok-bg: #123824;   --ok-text: #7ee2a3;
+        --warn-bg: #3d3010; --warn-text: #f3cf75;
+        --bad-bg: #451a1a;  --bad-text: #ff9f9f;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 20px 56px; }
+
+    header { margin-bottom: 28px; }
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      line-height: 1.05;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .sub { margin: 0; color: var(--muted); font-size: 1.05rem; }
+
+    /* Filters: pill inputs */
+    form#filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 900px) { form#filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 520px) { form#filters { grid-template-columns: 1fr; } }
+
+    input[type="text"] {
+      width: 100%;
+      height: 52px;
+      padding: 0 22px;
+      border: 2px solid transparent;
+      border-radius: var(--radius-pill);
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      transition: border-color .15s, background .15s;
+    }
+    input[type="text"]::placeholder { color: var(--muted); }
+    input[type="text"]:hover { background: var(--surface-hover); }
+    input[type="text"]:focus { border-color: var(--primary); background: var(--bg); }
+
+    /* Buttons: pills */
+    button {
+      height: 52px;
+      padding: 0 28px;
+      border: 0;
+      border-radius: var(--radius-pill);
+      background: var(--primary);
+      color: var(--primary-text);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .1s, opacity .15s, background .15s;
+    }
+    button:hover:not(:disabled) { opacity: .86; }
+    button:active:not(:disabled) { transform: scale(.97); }
+    button:focus-visible, tr[tabindex]:focus-visible {
+      outline: 3px solid var(--primary);
+      outline-offset: 2px;
+    }
+    button.secondary { background: var(--surface); color: var(--text); }
+    button.secondary:hover:not(:disabled) { background: var(--surface-hover); opacity: 1; }
+    button:disabled { opacity: .35; cursor: not-allowed; }
+    button.ghost { height: 52px; }
+
+    /* Layout */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 12px 12px 16px;
+    }
+    .table-scroll { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+    td { padding: 14px 16px; white-space: nowrap; }
+    #users tbody tr { cursor: pointer; transition: background .12s; }
+    #users tbody tr td:first-child { border-radius: 18px 0 0 18px; }
+    #users tbody tr td:last-child  { border-radius: 0 18px 18px 0; }
+    #users tbody tr:hover { background: var(--surface-hover); }
+    #users tbody tr.selected { background: var(--primary); color: var(--primary-text); }
+    #users tbody tr.selected td .tag { background: rgba(255,255,255,.18); color: inherit; }
+    @media (prefers-color-scheme: dark) {
+      #users tbody tr.selected td .tag { background: rgba(0,0,0,.12); }
+    }
+    td.name { font-weight: 600; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: var(--radius-pill);
+      background: var(--bg);
+      font-size: .8rem;
+      font-weight: 600;
+    }
+
+    .pager { display: flex; gap: 8px; align-items: center; padding: 14px 8px 0; flex-wrap: wrap; }
+    .pager button { height: 44px; padding: 0 22px; }
+    .muted { color: var(--muted); }
+    #summary { margin-left: 6px; }
+
+    /* Orders panel: dark card */
+    aside {
+      position: sticky;
+      top: 20px;
+      background: var(--dark-panel);
+      color: var(--dark-panel-text);
+      border-radius: var(--radius-card);
+      padding: 28px 24px 24px;
+      min-height: 220px;
+    }
+    @media (max-width: 900px) { aside { position: static; } }
+    aside h2 { margin: 0 0 4px; font-size: 1.5rem; letter-spacing: -0.02em; line-height: 1.15; }
+    #orders-hint { margin: 0 0 18px; color: var(--dark-panel-muted); }
+    #orders-total {
+      font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums; margin: 0 0 4px;
+    }
+    #orders th { color: var(--dark-panel-muted); padding-left: 0; padding-right: 0; }
+    #orders td { padding: 12px 0; border-top: 1px solid var(--dark-panel-line); white-space: normal; }
+    #orders td.num { padding-left: 12px; }
+    #orders .tag { background: var(--dark-panel-line); color: var(--dark-panel-text); }
+    #orders .tag.ok   { background: var(--ok-bg);   color: var(--ok-text); }
+    #orders .tag.warn { background: var(--warn-bg); color: var(--warn-text); }
+    #orders .tag.bad  { background: var(--bad-bg);  color: var(--bad-text); }
+    .orders-scroll { max-height: 60vh; overflow-y: auto; }
+
+    .empty { padding: 28px 16px; color: var(--muted); text-align: center; }
   </style>
 </head>
 <body>
-  <h1>Consumers</h1>
+  <div class="wrap">
+    <header>
+      <h1>Consumers</h1>
+      <p class="sub">Find a consumer, then open their orders.</p>
+    </header>
 
-  <form id="filters" autocomplete="off">
-    <input id="first_name" placeholder="First name">
-    <input id="last_name" placeholder="Last name">
-    <input id="email" placeholder="Email">
-    <input id="country" placeholder="Country">
-  </form>
+    <form id="filters" autocomplete="off">
+      <input type="text" id="first_name" placeholder="First name" aria-label="First name">
+      <input type="text" id="last_name" placeholder="Last name" aria-label="Last name">
+      <input type="text" id="email" placeholder="Email" aria-label="Email">
+      <input type="text" id="country" placeholder="Country" aria-label="Country">
+      <button type="button" id="reset" class="secondary ghost">Clear</button>
+    </form>
 
-  <div class="layout">
-    <section>
-      <table id="users">
-        <thead>
-          <tr><th>First name</th><th>Last name</th><th>Email</th><th>Country</th><th>City</th><th>Plan</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="pager">
-        <button id="prev" type="button">Previous</button>
-        <button id="next" type="button">Next</button>
-        <span id="summary" class="muted"></span>
-      </div>
-    </section>
+    <div class="layout">
+      <section class="card" aria-label="Consumers">
+        <div class="table-scroll">
+          <table id="users">
+            <thead>
+              <tr>
+                <th>Name</th><th>Email</th><th>Country</th><th>City</th><th>Plan</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="users-empty" class="empty" hidden>No consumers found.</div>
+        </div>
+        <div class="pager">
+          <button id="prev" type="button" class="secondary">Previous</button>
+          <button id="next" type="button" class="secondary">Next</button>
+          <span id="summary" class="muted"></span>
+        </div>
+      </section>
 
-    <aside>
-      <h2 id="orders-title">Orders</h2>
-      <p id="orders-hint" class="muted">Select a consumer to see their orders.</p>
-      <table id="orders" hidden>
-        <thead>
-          <tr><th>Date</th><th>Category</th><th>Status</th><th class="num">Amount</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </aside>
+      <aside aria-live="polite">
+        <h2 id="orders-title">Orders</h2>
+        <p id="orders-hint">Select a consumer to see their orders.</p>
+        <p id="orders-total" hidden></p>
+        <div class="orders-scroll">
+          <table id="orders" hidden>
+            <thead>
+              <tr><th>Date</th><th>Category</th><th>Status</th><th class="num">Amount</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </aside>
+    </div>
   </div>
 
   <script>
@@ -74,6 +262,23 @@
       return td;
     }
 
+    function tagCell(text, cls) {
+      const td = document.createElement("td");
+      const span = document.createElement("span");
+      span.className = "tag" + (cls ? " " + cls : "");
+      span.textContent = text ?? "";
+      td.append(span);
+      return td;
+    }
+
+    function statusClass(status) {
+      const s = String(status || "").toLowerCase();
+      if (s === "completed") return "ok";
+      if (s === "pending") return "warn";
+      if (s === "cancelled" || s === "canceled" || s === "failed") return "bad";
+      return "";
+    }
+
     async function loadUsers() {
       const myReq = ++usersReq;
       const params = new URLSearchParams({ limit: PAGE, offset });
@@ -81,7 +286,13 @@
         const v = $(f).value.trim();
         if (v) params.set(f, v);
       }
-      const res = await fetch("/api/users?" + params);
+      let res;
+      try {
+        res = await fetch("/api/users?" + params);
+      } catch {
+        if (myReq === usersReq) $("summary").textContent = "Failed to load consumers.";
+        return;
+      }
       if (myReq !== usersReq) return; // a newer request replaced this one
       if (!res.ok) { $("summary").textContent = "Failed to load consumers."; return; }
 
@@ -92,16 +303,23 @@
         const tr = document.createElement("tr");
         tr.tabIndex = 0;
         if (u.user_id === selectedId) tr.classList.add("selected");
-        tr.append(cell(u.first_name), cell(u.last_name), cell(u.email),
-                  cell(u.country), cell(u.city), cell(u.subscription));
+        tr.append(
+          cell(`${u.first_name ?? ""} ${u.last_name ?? ""}`.trim(), "name"),
+          cell(u.email),
+          cell(u.country),
+          cell(u.city),
+          tagCell(u.subscription)
+        );
         const pick = () => selectUser(u, tr);
         tr.addEventListener("click", pick);
         tr.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
         tbody.append(tr);
       }
+      $("users-empty").hidden = rows.length > 0;
+      $("users").hidden = rows.length === 0;
       $("summary").textContent = total
         ? `${offset + 1}–${offset + rows.length} of ${total}`
-        : "No consumers found";
+        : "";
       $("prev").disabled = offset === 0;
       $("next").disabled = offset + rows.length >= total;
     }
@@ -110,13 +328,20 @@
       selectedId = user.user_id;
       document.querySelectorAll("#users tr.selected").forEach((r) => r.classList.remove("selected"));
       tr.classList.add("selected");
-      $("orders-title").textContent = `Orders: ${user.first_name} ${user.last_name}`;
+      $("orders-title").textContent = `${user.first_name} ${user.last_name}`.trim();
       $("orders-hint").hidden = false;
       $("orders-hint").textContent = "Loading...";
+      $("orders-total").hidden = true;
       $("orders").hidden = true;
 
       const myReq = ++ordersReq;
-      const res = await fetch("/api/orders?user_id=" + user.user_id);
+      let res;
+      try {
+        res = await fetch("/api/orders?user_id=" + user.user_id);
+      } catch {
+        if (myReq === ordersReq) $("orders-hint").textContent = "Failed to load orders.";
+        return;
+      }
       if (myReq !== ordersReq) return;
       if (!res.ok) { $("orders-hint").textContent = "Failed to load orders."; return; }
 
@@ -129,11 +354,17 @@
       for (const o of orders) {
         sum += o.amount;
         const tr2 = document.createElement("tr");
-        tr2.append(cell(o.order_date), cell(o.product_category), cell(o.status),
-                   cell(o.amount.toFixed(2), "num"));
+        tr2.append(
+          cell(o.order_date),
+          cell(o.product_category),
+          tagCell(o.status, statusClass(o.status)),
+          cell(o.amount.toFixed(2), "num")
+        );
         tbody.append(tr2);
       }
-      $("orders-hint").textContent = `${orders.length} orders, total ${sum.toFixed(2)}`;
+      $("orders-total").textContent = sum.toFixed(2);
+      $("orders-total").hidden = false;
+      $("orders-hint").textContent = `${orders.length} orders in total`;
       $("orders").hidden = false;
     }
 
@@ -142,6 +373,11 @@
       timer = setTimeout(() => { offset = 0; loadUsers(); }, 300);
     });
     $("filters").addEventListener("submit", (e) => e.preventDefault());
+    $("reset").addEventListener("click", () => {
+      for (const f of fields) $(f).value = "";
+      offset = 0;
+      loadUsers();
+    });
     $("prev").addEventListener("click", () => { offset = Math.max(offset - PAGE, 0); loadUsers(); });
     $("next").addEventListener("click", () => { offset += PAGE; loadUsers(); });
 
