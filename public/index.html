@@ -2,11 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
   <title>Consumers</title>
+  <script>
+    // Apply a saved theme before the first paint to avoid a flash.
+    try {
+      var saved = localStorage.getItem("theme");
+      if (saved === "dark" || saved === "light") {
+        document.documentElement.setAttribute("data-theme", saved);
+      }
+    } catch (e) {}
+  </script>
   <style>
+    /* ---------- Theme variables ----------
+       Light by default; dark follows the system unless the user picked a
+       theme with the switch (data-theme on <html>). */
     :root {
+      color-scheme: light;
       --bg: #ffffff;
       --surface: #f4f4f5;
       --surface-hover: #ebebed;
@@ -19,14 +32,33 @@
       --dark-panel-text: #ffffff;
       --dark-panel-muted: #9a9aa3;
       --dark-panel-line: #26262a;
+      --sel-tag: rgba(255, 255, 255, .18);
       --ok-bg: #dcf5e4;   --ok-text: #11693a;
       --warn-bg: #fff0cc; --warn-text: #7a5300;
       --bad-bg: #fde0e0;  --bad-text: #a31a1a;
       --radius-card: 28px;
       --radius-pill: 999px;
     }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #000000;
+      --surface: #141416;
+      --surface-hover: #1d1d20;
+      --text: #f5f5f6;
+      --muted: #8e8e97;
+      --line: #26262a;
+      --primary: #ffffff;
+      --primary-text: #0b0b0c;
+      --dark-panel: #1d1d20;
+      --dark-panel-line: #2e2e33;
+      --sel-tag: rgba(0, 0, 0, .12);
+      --ok-bg: #123824;   --ok-text: #7ee2a3;
+      --warn-bg: #3d3010; --warn-text: #f3cf75;
+      --bad-bg: #451a1a;  --bad-text: #ff9f9f;
+    }
     @media (prefers-color-scheme: dark) {
-      :root {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
         --bg: #000000;
         --surface: #141416;
         --surface-hover: #1d1d20;
@@ -37,13 +69,14 @@
         --primary-text: #0b0b0c;
         --dark-panel: #1d1d20;
         --dark-panel-line: #2e2e33;
+        --sel-tag: rgba(0, 0, 0, .12);
         --ok-bg: #123824;   --ok-text: #7ee2a3;
         --warn-bg: #3d3010; --warn-text: #f3cf75;
         --bad-bg: #451a1a;  --bad-text: #ff9f9f;
       }
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       margin: 0;
       background: var(--bg);
@@ -52,6 +85,7 @@
       font-size: 16px;
       line-height: 1.45;
       -webkit-font-smoothing: antialiased;
+      -webkit-text-size-adjust: 100%;
     }
     .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 20px 56px; }
 
@@ -63,6 +97,7 @@
       flex-wrap: wrap;
       margin-bottom: 28px;
     }
+    .top-actions { display: flex; gap: 10px; }
     h1 {
       margin: 0 0 6px;
       font-size: clamp(2rem, 5vw, 3.25rem);
@@ -72,7 +107,7 @@
     }
     .sub { margin: 0; color: var(--muted); font-size: 1.05rem; }
 
-    /* Inputs: pills */
+    /* Inputs: pills (16px text keeps iOS from zooming in on focus) */
     input, select, textarea {
       width: 100%;
       height: 52px;
@@ -97,8 +132,6 @@
       gap: 10px;
       margin-bottom: 20px;
     }
-    @media (max-width: 900px) { form#filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 520px) { form#filters { grid-template-columns: 1fr; } }
 
     /* Buttons: pills */
     button {
@@ -111,6 +144,7 @@
       font: inherit;
       font-weight: 600;
       cursor: pointer;
+      touch-action: manipulation;
       transition: transform .1s, opacity .15s, background .15s;
     }
     button:hover:not(:disabled) { opacity: .86; }
@@ -122,6 +156,15 @@
     button.secondary { background: var(--surface); color: var(--text); }
     button.secondary:hover:not(:disabled) { background: var(--surface-hover); opacity: 1; }
     button:disabled { opacity: .35; cursor: not-allowed; }
+    button.icon {
+      width: 52px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button.icon svg { width: 22px; height: 22px; }
+    button.icon [hidden] { display: none; }
 
     /* Layout */
     .layout {
@@ -130,7 +173,6 @@
       gap: 20px;
       align-items: start;
     }
-    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
     .card {
       background: var(--surface);
@@ -156,10 +198,7 @@
     #users tbody tr td:last-child  { border-radius: 0 18px 18px 0; }
     #users tbody tr:hover { background: var(--surface-hover); }
     #users tbody tr.selected { background: var(--primary); color: var(--primary-text); }
-    #users tbody tr.selected td .tag { background: rgba(255,255,255,.18); color: inherit; }
-    @media (prefers-color-scheme: dark) {
-      #users tbody tr.selected td .tag { background: rgba(0,0,0,.12); }
-    }
+    #users tbody tr.selected td .tag { background: var(--sel-tag); color: inherit; }
     td.name { font-weight: 600; }
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
@@ -177,7 +216,7 @@
     .muted { color: var(--muted); }
     #summary { margin-left: 6px; }
 
-    /* Orders panel: dark card */
+    /* Orders panel: dark card on desktop, bottom sheet on small screens */
     aside {
       position: sticky;
       top: 20px;
@@ -187,7 +226,6 @@
       padding: 28px 24px 24px;
       min-height: 220px;
     }
-    @media (max-width: 900px) { aside { position: static; } }
     aside h2 { margin: 0 0 4px; font-size: 1.5rem; letter-spacing: -0.02em; line-height: 1.15; }
     #orders-hint { margin: 0 0 18px; color: var(--dark-panel-muted); }
     #orders-total {
@@ -201,6 +239,7 @@
       background: var(--dark-panel-text);
       color: var(--dark-panel);
     }
+    .sheet-close, .sheet-backdrop { display: none; }
     #orders th { color: var(--dark-panel-muted); padding-left: 0; padding-right: 0; }
     #orders td { padding: 12px 0; border-top: 1px solid var(--dark-panel-line); white-space: normal; }
     #orders td.num { padding-left: 12px; }
@@ -228,7 +267,6 @@
     dialog h2 { margin: 0 0 4px; font-size: 1.5rem; letter-spacing: -0.02em; }
     dialog .lead { margin: 0 0 20px; color: var(--muted); }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
-    @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
     .span2 { grid-column: 1 / -1; }
     .field label {
       display: block;
@@ -244,8 +282,9 @@
     .toast {
       position: fixed;
       left: 50%;
-      bottom: 24px;
+      bottom: calc(24px + env(safe-area-inset-bottom));
       transform: translate(-50%, 20px);
+      max-width: calc(100vw - 32px);
       padding: 12px 22px;
       border-radius: var(--radius-pill);
       background: var(--primary);
@@ -254,9 +293,165 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity .2s, transform .2s;
-      z-index: 10;
+      z-index: 40;
     }
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ---------- Tablets and phones: single column, orders as a sheet ---------- */
+    @media (max-width: 900px) {
+      form#filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+
+      aside {
+        position: fixed;
+        left: 0; right: 0; bottom: 0; top: auto;
+        z-index: 20;
+        min-height: 0;
+        max-height: 88vh;
+        max-height: 88dvh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-radius: var(--radius-card) var(--radius-card) 0 0;
+        padding: 28px 20px calc(24px + env(safe-area-inset-bottom));
+        transform: translateY(105%);
+        visibility: hidden;
+        transition: transform .25s ease, visibility 0s linear .25s;
+      }
+      aside.open {
+        transform: none;
+        visibility: visible;
+        transition: transform .25s ease, visibility 0s;
+      }
+      aside::before {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 4px;
+        margin: -14px auto 16px;
+        border-radius: 2px;
+        background: var(--dark-panel-muted);
+        opacity: .5;
+      }
+      aside h2 { padding-right: 84px; }
+      .orders-scroll { max-height: none; overflow: visible; }
+
+      .sheet-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 22px;
+        right: 16px;
+        height: 40px;
+        padding: 0 18px;
+        background: var(--dark-panel-line);
+        color: var(--dark-panel-text);
+      }
+      .sheet-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 15;
+        background: rgba(0, 0, 0, .5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .25s;
+      }
+      .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+      body.sheet-open { overflow: hidden; }
+    }
+
+    /* ---------- Phones ---------- */
+    @media (max-width: 640px) {
+      .wrap { padding: 20px 16px 48px; }
+      .top { margin-bottom: 20px; }
+      .top-actions { width: 100%; }
+      #add-consumer { flex: 1; }
+      .sub { font-size: 1rem; }
+
+      /* Consumers: one card per row instead of a wide table */
+      .card { padding: 10px; }
+      #users, #users tbody { display: block; }
+      #users thead { display: none; }
+      #users tbody tr {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        grid-template-areas:
+          "name name plan"
+          "email email email"
+          "country city city";
+        row-gap: 2px;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 14px 16px;
+        background: var(--bg);
+        border-radius: 20px;
+      }
+      #users tbody tr:hover { background: var(--surface-hover); }
+      #users tbody tr.selected { background: var(--primary); }
+      #users tbody tr td,
+      #users tbody tr td:first-child,
+      #users tbody tr td:last-child {
+        padding: 0;
+        border-radius: 0;
+        white-space: normal;
+      }
+      #users tbody tr td:nth-child(1) { grid-area: name; font-size: 1.05rem; }
+      #users tbody tr td:nth-child(2) { grid-area: email; overflow-wrap: anywhere; }
+      #users tbody tr td:nth-child(3) { grid-area: country; }
+      #users tbody tr td:nth-child(3)::after { content: "\00b7"; margin: 0 8px; }
+      #users tbody tr td:nth-child(4) { grid-area: city; }
+      #users tbody tr td:nth-child(5) { grid-area: plan; justify-self: end; }
+      #users tbody tr td:nth-child(n+2):nth-child(-n+4) { color: var(--muted); font-size: .9rem; }
+      #users tbody tr.selected td:nth-child(n+2):nth-child(-n+4) { color: inherit; opacity: .75; }
+      #users tbody tr .tag { background: var(--surface); }
+      #users tbody tr.selected .tag { background: var(--sel-tag); }
+
+      /* Orders inside the sheet: two-line rows */
+      #orders, #orders tbody { display: block; }
+      #orders thead { display: none; }
+      #orders tbody tr {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "date amount"
+          "category status";
+        gap: 4px 12px;
+        align-items: center;
+        padding: 12px 0;
+        border-top: 1px solid var(--dark-panel-line);
+      }
+      #orders td, #orders td.num { padding: 0; border: 0; }
+      #orders td:nth-child(1) { grid-area: date; font-weight: 600; }
+      #orders td:nth-child(2) { grid-area: category; color: var(--dark-panel-muted); font-size: .9rem; }
+      #orders td:nth-child(3) { grid-area: status; justify-self: end; }
+      #orders td:nth-child(4) { grid-area: amount; font-weight: 700; }
+
+      /* Dialogs slide up from the bottom edge */
+      dialog {
+        width: 100%;
+        max-width: 100%;
+        margin: auto 0 0 0;
+        max-height: 92vh;
+        max-height: 92dvh;
+        padding: 24px 18px calc(22px + env(safe-area-inset-bottom));
+        border-radius: var(--radius-card) var(--radius-card) 0 0;
+        border-width: 1px 0 0 0;
+      }
+      .grid2 { grid-template-columns: 1fr; }
+      .actions button { flex: 1; }
+    }
+
+    @media (max-width: 520px) {
+      /* First/last name side by side, email full width, country + Clear */
+      #email { grid-column: 1 / -1; }
+      .pager button { flex: 1; }
+      #summary { order: -1; width: 100%; margin: 0 0 4px 4px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: .01ms !important; }
+    }
   </style>
 </head>
 <body>
@@ -266,14 +461,20 @@
         <h1>Consumers</h1>
         <p class="sub">Find a consumer, then open their orders.</p>
       </div>
-      <button id="add-consumer" type="button">Add consumer</button>
+      <div class="top-actions">
+        <button id="theme" type="button" class="secondary icon" aria-label="Switch to dark mode">
+          <svg id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <button id="add-consumer" type="button">Add consumer</button>
+      </div>
     </div>
 
     <form id="filters" autocomplete="off">
-      <input type="text" id="first_name" placeholder="First name" aria-label="First name">
-      <input type="text" id="last_name" placeholder="Last name" aria-label="Last name">
-      <input type="text" id="email" placeholder="Email" aria-label="Email">
-      <input type="text" id="country" placeholder="Country" aria-label="Country">
+      <input type="text" id="first_name" placeholder="First name" aria-label="First name" autocapitalize="words" enterkeyhint="search">
+      <input type="text" id="last_name" placeholder="Last name" aria-label="Last name" autocapitalize="words" enterkeyhint="search">
+      <input type="text" id="email" placeholder="Email" aria-label="Email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+      <input type="text" id="country" placeholder="Country" aria-label="Country" autocapitalize="words" enterkeyhint="search">
       <button type="button" id="reset" class="secondary">Clear</button>
     </form>
 
@@ -297,7 +498,8 @@
         </div>
       </section>
 
-      <aside aria-live="polite">
+      <aside id="orders-panel" aria-live="polite" aria-label="Orders">
+        <button id="close-orders" type="button" class="sheet-close" aria-label="Close orders">Close</button>
         <h2 id="orders-title">Orders</h2>
         <p id="orders-hint">Select a consumer to see their orders.</p>
         <button id="add-order" type="button" class="on-dark" disabled>Add order</button>
@@ -313,6 +515,7 @@
       </aside>
     </div>
   </div>
+  <div id="sheet-backdrop" class="sheet-backdrop"></div>
 
   <!-- Admin key -->
   <dialog id="key-dialog">
@@ -321,7 +524,7 @@
       <p class="lead">Enter the key to add records. It is kept only until you close this tab.</p>
       <div class="field">
         <label for="key-input">Key</label>
-        <input id="key-input" type="password" required autocomplete="off" autofocus>
+        <input id="key-input" type="password" required autocomplete="off" autocapitalize="off" autofocus>
       </div>
       <div class="actions">
         <button value="cancel" class="secondary" formnovalidate>Cancel</button>
@@ -338,15 +541,15 @@
       <div class="grid2">
         <div class="field">
           <label for="c_first_name">First name *</label>
-          <input id="c_first_name" type="text" required maxlength="100" autofocus>
+          <input id="c_first_name" type="text" required maxlength="100" autocapitalize="words" autofocus>
         </div>
         <div class="field">
           <label for="c_last_name">Last name *</label>
-          <input id="c_last_name" type="text" required maxlength="100">
+          <input id="c_last_name" type="text" required maxlength="100" autocapitalize="words">
         </div>
         <div class="field span2">
           <label for="c_email">Email *</label>
-          <input id="c_email" type="email" required maxlength="254">
+          <input id="c_email" type="email" required maxlength="254" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
         </div>
         <div class="field">
           <label for="c_dob">Date of birth *</label>
@@ -363,15 +566,15 @@
         </div>
         <div class="field">
           <label for="c_country">Country *</label>
-          <input id="c_country" type="text" required maxlength="100">
+          <input id="c_country" type="text" required maxlength="100" autocapitalize="words">
         </div>
         <div class="field">
           <label for="c_city">City *</label>
-          <input id="c_city" type="text" required maxlength="100">
+          <input id="c_city" type="text" required maxlength="100" autocapitalize="words">
         </div>
         <div class="field">
           <label for="c_phone">Phone</label>
-          <input id="c_phone" type="text" maxlength="25" placeholder="+380 ...">
+          <input id="c_phone" type="tel" maxlength="25" inputmode="tel" placeholder="+380 ...">
         </div>
         <div class="field">
           <label for="c_subscription">Subscription</label>
@@ -380,7 +583,7 @@
         </div>
         <div class="field span2">
           <label for="c_balance">Account balance</label>
-          <input id="c_balance" type="number" min="0" step="0.01" placeholder="0.00">
+          <input id="c_balance" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
         </div>
         <div class="field span2">
           <label for="c_notes">Notes</label>
@@ -407,7 +610,7 @@
         </div>
         <div class="field">
           <label for="o_amount">Amount *</label>
-          <input id="o_amount" type="number" required min="0.01" max="1000000" step="0.01">
+          <input id="o_amount" type="number" required min="0.01" max="1000000" step="0.01" inputmode="decimal">
         </div>
         <div class="field">
           <label for="o_category">Category *</label>
@@ -443,8 +646,61 @@
     const PAGE = 25;
     const fields = ["first_name", "last_name", "email", "country"];
     const $ = (id) => document.getElementById(id);
+    const shown = new Map(); // user_id -> user, for the rows currently listed
     let offset = 0, selectedId = null, selectedUser = null;
     let timer, usersReq = 0, ordersReq = 0, toastTimer;
+
+    /* ---------- theme (light / dark) ---------- */
+    const THEME_KEY = "theme";
+    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    function effectiveTheme() {
+      return document.documentElement.getAttribute("data-theme") || (darkQuery.matches ? "dark" : "light");
+    }
+    function applyThemeUi() {
+      const dark = effectiveTheme() === "dark";
+      $("icon-moon").hidden = dark;
+      $("icon-sun").hidden = !dark;
+      $("theme").setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", dark ? "#000000" : "#ffffff");
+    }
+    $("theme").addEventListener("click", () => {
+      const next = effectiveTheme() === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem(THEME_KEY, next); } catch {}
+      applyThemeUi();
+    });
+    // Without a saved choice the page follows the system setting live.
+    if (darkQuery.addEventListener) darkQuery.addEventListener("change", applyThemeUi);
+    applyThemeUi();
+
+    /* ---------- orders sheet (small screens only) ---------- */
+    const sheetQuery = window.matchMedia("(max-width: 900px)");
+    function openSheet() {
+      if (!sheetQuery.matches) return;
+      $("orders-panel").classList.add("open");
+      $("sheet-backdrop").classList.add("open");
+      document.body.classList.add("sheet-open");
+      $("close-orders").focus({ preventScroll: true });
+    }
+    function closeSheet() {
+      $("orders-panel").classList.remove("open");
+      $("sheet-backdrop").classList.remove("open");
+      document.body.classList.remove("sheet-open");
+    }
+    $("close-orders").addEventListener("click", () => {
+      closeSheet();
+      const row = document.querySelector("#users tr.selected");
+      if (row) row.focus({ preventScroll: true });
+    });
+    $("sheet-backdrop").addEventListener("click", closeSheet);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !document.querySelector("dialog[open]")) closeSheet();
+    });
+    if (sheetQuery.addEventListener) {
+      sheetQuery.addEventListener("change", () => { if (!sheetQuery.matches) closeSheet(); });
+    }
 
     /* ---------- admin key (kept for this tab only) ---------- */
     const KEY_NAME = "adminKey";
@@ -501,10 +757,12 @@
 
     function tagCell(text, cls) {
       const td = document.createElement("td");
-      const span = document.createElement("span");
-      span.className = "tag" + (cls ? " " + cls : "");
-      span.textContent = text ?? "";
-      td.append(span);
+      if (text) {
+        const span = document.createElement("span");
+        span.className = "tag" + (cls ? " " + cls : "");
+        span.textContent = text;
+        td.append(span);
+      }
       return td;
     }
 
@@ -569,7 +827,9 @@
       const { total, rows } = await res.json();
       const tbody = $("users").tBodies[0];
       tbody.replaceChildren();
+      shown.clear();
       for (const u of rows) {
+        shown.set(u.user_id, u);
         const tr = document.createElement("tr");
         tr.tabIndex = 0;
         tr.dataset.id = u.user_id;
@@ -596,12 +856,13 @@
     }
 
     /* ---------- orders panel ---------- */
-    function selectUser(user, tr) {
+    function selectUser(user, tr, open = true) {
       selectedId = user.user_id;
       selectedUser = user;
       document.querySelectorAll("#users tr.selected").forEach((r) => r.classList.remove("selected"));
       if (tr) tr.classList.add("selected");
       $("add-order").disabled = false;
+      if (open) openSheet();
       return showOrders(user);
     }
 
@@ -679,7 +940,9 @@
       offset = 0;
       await loadUsers();
       const row = [...$("users").tBodies[0].rows].find((r) => Number(r.dataset.id) === data.user_id);
-      if (row) row.click();
+      const user = shown.get(data.user_id);
+      // Highlight the new consumer without covering the list with the orders sheet.
+      if (row && user) selectUser(user, row, false);
       toast(`Consumer added (ID ${data.user_id})`);
     });
 
