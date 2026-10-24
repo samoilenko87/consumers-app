@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
+  <link rel="preload" href="/fonts/TwemojiCountryFlags.woff2" as="font" type="font/woff2" crossorigin>
   <title>Consumers</title>
   <script>
     // Apply a saved theme before the first paint to avoid a flash.
@@ -195,7 +196,10 @@
     }
     td { padding: 14px 12px; }
     #users td { overflow-wrap: break-word; }
-    #users td:nth-child(2) { overflow-wrap: anywhere; }       /* very long emails */
+    #users td:nth-child(1), #users td:nth-child(2) { overflow-wrap: anywhere; }
+    #users td:nth-child(1), #users th:nth-child(1) { min-width: 7rem; }
+    #users td:nth-child(2), #users th:nth-child(2) { min-width: 13.5rem; }
+    #users td:nth-child(3), #users th:nth-child(3) { min-width: 7.5rem; }
     #users td:nth-child(5), #users th:nth-child(5) { white-space: nowrap; }
     #users tbody tr { cursor: pointer; transition: background .12s; }
     #users tbody tr td:first-child { border-radius: 18px 0 0 18px; }
@@ -204,6 +208,23 @@
     #users tbody tr.selected { background: var(--primary); color: var(--primary-text); }
     #users tbody tr.selected td .tag { background: var(--sel-tag); color: inherit; }
     td.name { font-weight: 600; }
+
+    /* Flags. Windows has no flag emoji, so a small font supplies them on every device.
+       Flag artwork: Twemoji, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). */
+    @font-face {
+      font-family: "Twemoji Country Flags";
+      unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067,
+        U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
+      src: url("/fonts/TwemojiCountryFlags.woff2") format("woff2");
+      font-display: swap;
+    }
+    .flag {
+      display: inline-block;
+      width: 1.5em;
+      font-family: "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+      font-style: normal;
+      line-height: 1;
+    }
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
     .tag {
@@ -236,12 +257,17 @@
       font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
       font-variant-numeric: tabular-nums; margin: 0 0 4px;
     }
+    .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
     button.on-dark {
       height: 44px;
       padding: 0 22px;
-      margin: 0 0 18px;
       background: var(--dark-panel-text);
       color: var(--dark-panel);
+    }
+    button.on-dark.outline {
+      background: transparent;
+      color: var(--dark-panel-text);
+      box-shadow: inset 0 0 0 2px var(--dark-panel-muted);
     }
     .sheet-close, .sheet-backdrop { display: none; }
     #orders th { color: var(--dark-panel-muted); padding-left: 0; padding-right: 0; }
@@ -254,6 +280,8 @@
     .orders-scroll { max-height: 60vh; overflow-y: auto; }
 
     .empty { padding: 28px 16px; color: var(--muted); text-align: center; }
+    .credits { margin-top: 32px; color: var(--muted); font-size: .8rem; text-align: center; }
+    .credits a { color: inherit; }
 
     /* Dialogs */
     dialog {
@@ -367,11 +395,12 @@
 
     /* ---------- Narrow list (any screen): one card per consumer instead of a wide table ---------- */
     @container list (max-width: 700px) {
+      .flag-empty { display: none; }
     #users, #users tbody { display: block; }
     #users thead { display: none; }
     #users tbody tr {
       display: grid;
-      grid-template-columns: auto auto 1fr;
+      grid-template-columns: auto auto minmax(0, 1fr);
       grid-template-areas:
         "name name plan"
         "email email email"
@@ -393,7 +422,8 @@
       white-space: normal;
     }
     #users tbody tr td:nth-child(1) { grid-area: name; font-size: 1.05rem; }
-    #users tbody tr td:nth-child(2) { grid-area: email; overflow-wrap: anywhere; }
+    #users tbody tr td:nth-child(n) { min-width: 0; }
+    #users tbody tr td:nth-child(2) { grid-area: email; }
     #users tbody tr td:nth-child(3) { grid-area: country; }
     #users tbody tr td:nth-child(3)::after { content: "\00b7"; margin: 0 8px; }
     #users tbody tr td:nth-child(4) { grid-area: city; }
@@ -509,7 +539,10 @@
         <button id="close-orders" type="button" class="sheet-close" aria-label="Close orders">Close</button>
         <h2 id="orders-title">Orders</h2>
         <p id="orders-hint">Select a consumer to see their orders.</p>
-        <button id="add-order" type="button" class="on-dark" disabled>Add order</button>
+        <div class="panel-actions">
+          <button id="add-order" type="button" class="on-dark" disabled>Add order</button>
+          <button id="edit-consumer" type="button" class="on-dark outline" disabled>Edit consumer</button>
+        </div>
         <p id="orders-total" hidden></p>
         <div class="orders-scroll">
           <table id="orders" hidden>
@@ -521,6 +554,7 @@
         </div>
       </aside>
     </div>
+    <footer class="credits">Flag graphics: <a href="https://github.com/twitter/twemoji" target="_blank" rel="noopener">Twemoji</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></footer>
   </div>
   <div id="sheet-backdrop" class="sheet-backdrop"></div>
 
@@ -543,8 +577,8 @@
   <!-- Add consumer -->
   <dialog id="consumer-dialog">
     <form id="consumer-form">
-      <h2>Add consumer</h2>
-      <p class="lead">Registration date, referral code and login count are set automatically.</p>
+      <h2 id="consumer-title">Add consumer</h2>
+      <p class="lead" id="consumer-lead">Registration date, referral code and login count are set automatically.</p>
       <div class="grid2">
         <div class="field">
           <label for="c_first_name">First name *</label>
@@ -573,7 +607,8 @@
         </div>
         <div class="field">
           <label for="c_country">Country *</label>
-          <input id="c_country" type="text" required maxlength="100" autocapitalize="words">
+          <input id="c_country" type="text" required maxlength="100" autocapitalize="words" list="countries">
+          <datalist id="countries"></datalist>
         </div>
         <div class="field">
           <label for="c_city">City *</label>
@@ -588,9 +623,16 @@
           <input id="c_subscription" type="text" maxlength="30" list="plans">
           <datalist id="plans"><option value="Free"><option value="Basic"></datalist>
         </div>
-        <div class="field span2">
+        <div class="field span2" id="balance-field">
           <label for="c_balance">Account balance</label>
           <input id="c_balance" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+        </div>
+        <div class="field" id="status-field" hidden>
+          <label for="c_status">Status</label>
+          <select id="c_status">
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
         </div>
         <div class="field span2">
           <label for="c_notes">Notes</label>
@@ -740,6 +782,65 @@
       });
     }
 
+    /* ---------- country flags ---------- */
+    // ISO 3166-1 codes with English names.
+    const COUNTRY_DATA = "AC:Ascension Island|AD:Andorra|AE:United Arab Emirates|AF:Afghanistan|AG:Antigua & Barbuda|AI:Anguilla|AL:Albania|AM:Armenia|AO:Angola|AQ:Antarctica|AR:Argentina|AS:American Samoa|AT:Austria|AU:Australia|AW:Aruba|AX:Åland Islands|AZ:Azerbaijan|BA:Bosnia & Herzegovina|BB:Barbados|BD:Bangladesh|BE:Belgium|BF:Burkina Faso|BG:Bulgaria|BH:Bahrain|BI:Burundi|BJ:Benin|BL:St. Barthélemy|BM:Bermuda|BN:Brunei|BO:Bolivia|BQ:Caribbean Netherlands|BR:Brazil|BS:Bahamas|BT:Bhutan|BV:Bouvet Island|BW:Botswana|BY:Belarus|BZ:Belize|CA:Canada|CC:Cocos (Keeling) Islands|CD:Congo - Kinshasa|CF:Central African Republic|CG:Congo - Brazzaville|CH:Switzerland|CI:Côte d'Ivoire|CK:Cook Islands|CL:Chile|CM:Cameroon|CN:China|CO:Colombia|CP:Clipperton Island|CR:Costa Rica|CU:Cuba|CV:Cape Verde|CW:Curaçao|CX:Christmas Island|CY:Cyprus|CZ:Czechia|DE:Germany|DG:Diego Garcia|DJ:Djibouti|DK:Denmark|DM:Dominica|DO:Dominican Republic|DZ:Algeria|EA:Ceuta & Melilla|EC:Ecuador|EE:Estonia|EG:Egypt|EH:Western Sahara|ER:Eritrea|ES:Spain|ET:Ethiopia|EU:European Union|FI:Finland|FJ:Fiji|FK:Falkland Islands|FM:Micronesia|FO:Faroe Islands|FR:France|GA:Gabon|GB:United Kingdom|GD:Grenada|GE:Georgia|GF:French Guiana|GG:Guernsey|GH:Ghana|GI:Gibraltar|GL:Greenland|GM:Gambia|GN:Guinea|GP:Guadeloupe|GQ:Equatorial Guinea|GR:Greece|GS:South Georgia & South Sandwich Islands|GT:Guatemala|GU:Guam|GW:Guinea-Bissau|GY:Guyana|HK:Hong Kong SAR China|HM:Heard & McDonald Islands|HN:Honduras|HR:Croatia|HT:Haiti|HU:Hungary|IC:Canary Islands|ID:Indonesia|IE:Ireland|IL:Israel|IM:Isle of Man|IN:India|IO:British Indian Ocean Territory|IQ:Iraq|IR:Iran|IS:Iceland|IT:Italy|JE:Jersey|JM:Jamaica|JO:Jordan|JP:Japan|KE:Kenya|KG:Kyrgyzstan|KH:Cambodia|KI:Kiribati|KM:Comoros|KN:St. Kitts & Nevis|KP:North Korea|KR:South Korea|KW:Kuwait|KY:Cayman Islands|KZ:Kazakhstan|LA:Laos|LB:Lebanon|LC:St. Lucia|LI:Liechtenstein|LK:Sri Lanka|LR:Liberia|LS:Lesotho|LT:Lithuania|LU:Luxembourg|LV:Latvia|LY:Libya|MA:Morocco|MC:Monaco|MD:Moldova|ME:Montenegro|MF:St. Martin|MG:Madagascar|MH:Marshall Islands|MK:North Macedonia|ML:Mali|MM:Myanmar (Burma)|MN:Mongolia|MO:Macao SAR China|MP:Northern Mariana Islands|MQ:Martinique|MR:Mauritania|MS:Montserrat|MT:Malta|MU:Mauritius|MV:Maldives|MW:Malawi|MX:Mexico|MY:Malaysia|MZ:Mozambique|NA:Namibia|NC:New Caledonia|NE:Niger|NF:Norfolk Island|NG:Nigeria|NI:Nicaragua|NL:Netherlands|NO:Norway|NP:Nepal|NR:Nauru|NU:Niue|NZ:New Zealand|OM:Oman|PA:Panama|PE:Peru|PF:French Polynesia|PG:Papua New Guinea|PH:Philippines|PK:Pakistan|PL:Poland|PM:St. Pierre & Miquelon|PN:Pitcairn Islands|PR:Puerto Rico|PS:Palestinian Territories|PT:Portugal|PW:Palau|PY:Paraguay|QA:Qatar|RE:Réunion|RO:Romania|RS:Serbia|RU:Russia|RW:Rwanda|SA:Saudi Arabia|SB:Solomon Islands|SC:Seychelles|SD:Sudan|SE:Sweden|SG:Singapore|SH:St. Helena|SI:Slovenia|SJ:Svalbard & Jan Mayen|SK:Slovakia|SL:Sierra Leone|SM:San Marino|SN:Senegal|SO:Somalia|SR:Suriname|SS:South Sudan|ST:São Tomé & Príncipe|SV:El Salvador|SX:Sint Maarten|SY:Syria|SZ:Eswatini|TA:Tristan da Cunha|TC:Turks & Caicos Islands|TD:Chad|TF:French Southern Territories|TG:Togo|TH:Thailand|TJ:Tajikistan|TK:Tokelau|TL:Timor-Leste|TM:Turkmenistan|TN:Tunisia|TO:Tonga|TR:Türkiye|TT:Trinidad & Tobago|TV:Tuvalu|TW:Taiwan|TZ:Tanzania|UA:Ukraine|UG:Uganda|UM:U.S. Outlying Islands|US:United States|UY:Uruguay|UZ:Uzbekistan|VA:Vatican City|VC:St. Vincent & Grenadines|VE:Venezuela|VG:British Virgin Islands|VI:U.S. Virgin Islands|VN:Vietnam|VU:Vanuatu|WF:Wallis & Futuna|WS:Samoa|XK:Kosovo|YE:Yemen|YT:Mayotte|ZA:South Africa|ZM:Zambia|ZW:Zimbabwe";
+    // Other spellings people type, already in normalized form (lower case, plain letters and spaces).
+    const COUNTRY_ALIASES = {
+      "usa": "US", "u s a": "US", "u s": "US", "united states of america": "US",
+      "uk": "GB", "u k": "GB", "great britain": "GB", "britain": "GB", "england": "GB",
+      "scotland": "GB", "wales": "GB", "northern ireland": "GB",
+      "uae": "AE", "u a e": "AE",
+      "russian federation": "RU", "czech republic": "CZ", "turkey": "TR", "holland": "NL",
+      "the netherlands": "NL", "the bahamas": "BS", "the gambia": "GM", "the philippines": "PH",
+      "south korea": "KR", "republic of korea": "KR",
+      "democratic people s republic of korea": "KP", "dprk": "KP",
+      "viet nam": "VN", "ivory coast": "CI", "macedonia": "MK", "swaziland": "SZ",
+      "burma": "MM", "myanmar": "MM", "cabo verde": "CV", "east timor": "TL",
+      "hong kong": "HK", "macau": "MO", "macao": "MO",
+      "palestine": "PS", "state of palestine": "PS",
+      "vatican": "VA", "holy see": "VA",
+      "drc": "CD", "dr congo": "CD", "democratic republic of the congo": "CD",
+      "democratic republic of congo": "CD", "republic of the congo": "CG",
+      "us virgin islands": "VI", "united states virgin islands": "VI",
+      "bosnia": "BA", "bosnia herzegovina": "BA", "trinidad": "TT",
+      "brunei darussalam": "BN", "lao pdr": "LA", "syrian arab republic": "SY",
+      "united republic of tanzania": "TZ", "republic of moldova": "MD",
+      "slovak republic": "SK", "kyrgyz republic": "KG",
+      "federated states of micronesia": "FM", "people s republic of china": "CN",
+      "republic of ireland": "IE",
+    };
+    const COUNTRIES = COUNTRY_DATA.split("|").map((s) => [s.slice(0, 2), s.slice(3)]);
+    const COUNTRY_CODES = new Set(COUNTRIES.map(([code]) => code));
+
+    function normalizeCountry(s) {
+      return String(s ?? "")
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .toLowerCase().replace(/&/g, " and ")
+        .replace(/[^a-z0-9]+/g, " ").trim()
+        .replace(/\bst\b/g, "saint");
+    }
+    const NAME_TO_CODE = new Map(COUNTRIES.map(([code, name]) => [normalizeCountry(name), code]));
+    for (const [alias, code] of Object.entries(COUNTRY_ALIASES)) NAME_TO_CODE.set(alias, code);
+
+    function countryCode(name) {
+      const key = normalizeCountry(name);
+      if (!key) return null;
+      if (NAME_TO_CODE.has(key)) return NAME_TO_CODE.get(key);
+      const upper = key.toUpperCase();
+      return /^[A-Z]{2}$/.test(upper) && COUNTRY_CODES.has(upper) ? upper : null;
+    }
+    function flagEmoji(code) {
+      return String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+    }
+
+    // Suggestions for the country field of the add/edit form.
+    for (const [, name] of COUNTRIES) {
+      const option = document.createElement("option");
+      option.value = name;
+      $("countries").append(option);
+    }
+
     /* ---------- helpers ---------- */
     function todayLocal() {
       const d = new Date();
@@ -762,6 +863,29 @@
       return td;
     }
 
+    // Country name with its flag in front. Unknown names get an invisible spacer so rows stay aligned.
+    function countryCell(name) {
+      const td = document.createElement("td");
+      const code = countryCode(name);
+      const flag = document.createElement("span");
+      flag.className = code ? "flag" : "flag flag-empty";
+      flag.setAttribute("aria-hidden", "true");
+      if (code) flag.textContent = flagEmoji(code);
+      td.append(flag, name ?? "");
+      return td;
+    }
+
+    // Email with soft break points after @ . _ - so a long address wraps at natural places.
+    function emailCell(text) {
+      const td = document.createElement("td");
+      const parts = String(text ?? "").match(/[^@._-]*[@._-]?/g).filter(Boolean);
+      parts.forEach((part, i) => {
+        if (i) td.append(document.createElement("wbr"));
+        td.append(part);
+      });
+      return td;
+    }
+
     function tagCell(text, cls) {
       const td = document.createElement("td");
       if (text) {
@@ -781,15 +905,15 @@
       return "";
     }
 
-    /* POST helper: returns the parsed response on success, otherwise null
-       (and puts a readable message into errorEl). */
-    async function postJson(url, body, errorEl, submitBtn) {
+    /* Write helper (POST or PATCH): returns the parsed response on success, otherwise
+       null (and puts a readable message into errorEl). */
+    async function sendJson(method, url, body, errorEl, submitBtn) {
       if (!getKey() && !(await askKey())) return null;
       submitBtn.disabled = true;
       errorEl.textContent = "";
       try {
         const res = await fetch(url, {
-          method: "POST",
+          method,
           headers: { "content-type": "application/json", "x-admin-key": getKey() },
           body: JSON.stringify(body),
         });
@@ -843,8 +967,8 @@
         if (u.user_id === selectedId) tr.classList.add("selected");
         tr.append(
           cell(`${u.first_name ?? ""} ${u.last_name ?? ""}`.trim(), "name"),
-          cell(u.email),
-          cell(u.country),
+          emailCell(u.email),
+          countryCell(u.country),
           cell(u.city),
           tagCell(u.subscription)
         );
@@ -869,6 +993,7 @@
       document.querySelectorAll("#users tr.selected").forEach((r) => r.classList.remove("selected"));
       if (tr) tr.classList.add("selected");
       $("add-order").disabled = false;
+      $("edit-consumer").disabled = false;
       if (open) openSheet();
       return showOrders(user);
     }
@@ -914,31 +1039,144 @@
       $("orders").hidden = false;
     }
 
-    /* ---------- add consumer ---------- */
+    /* ---------- add / edit consumer (one dialog, two modes) ---------- */
+    let editing = null; // { id, original } while editing an existing consumer; null while adding
+
+    function setConsumerMode(isEdit) {
+      $("consumer-title").textContent = isEdit ? "Edit consumer" : "Add consumer";
+      $("consumer-submit").textContent = isEdit ? "Save changes" : "Save consumer";
+      $("status-field").hidden = !isEdit;
+      $("balance-field").classList.toggle("span2", !isEdit);
+      $("c_balance").required = isEdit; // may be blank for a new consumer, never for an existing one
+    }
+
+    // A stored value the form does not offer (say, an older gender label) is kept as an extra
+    // option, so an unrelated edit can never wipe it.
+    function resetGenderOptions() {
+      $("c_gender").querySelectorAll("option[data-extra]").forEach((o) => o.remove());
+    }
+    function ensureGenderOption(value) {
+      if (!value || [...$("c_gender").options].some((o) => o.value === value)) return;
+      const option = new Option(value, value);
+      option.dataset.extra = "1";
+      $("c_gender").add(option);
+    }
+
     async function openAddConsumer() {
       if (!getKey() && !(await askKey())) return;
+      editing = null;
       $("consumer-form").reset();
+      resetGenderOptions();
+      setConsumerMode(false);
+      $("consumer-lead").textContent = "Registration date, referral code and login count are set automatically.";
       $("consumer-error").textContent = "";
       $("c_dob").max = todayLocal();
       $("consumer-dialog").showModal();
     }
 
+    // Editing needs the full record, which the public list does not carry, so it is
+    // fetched with the admin key first.
+    async function openEditConsumer() {
+      if (!selectedUser) return;
+      if (!getKey() && !(await askKey())) return;
+      const button = $("edit-consumer");
+      button.disabled = true;
+      try {
+        const res = await fetch("/api/users/" + selectedUser.user_id, {
+          headers: { "x-admin-key": getKey() },
+        });
+        let data = null;
+        try { data = await res.json(); } catch {}
+        if (res.status === 401) {
+          clearKey();
+          toast("The admin key was not accepted. Try again.");
+          return;
+        }
+        if (!res.ok) { toast((data && data.error) || "Could not load this consumer."); return; }
+
+        editing = { id: data.user_id, original: data };
+        $("consumer-form").reset();
+        resetGenderOptions();
+        setConsumerMode(true);
+        ensureGenderOption(data.gender);
+        $("c_first_name").value = data.first_name ?? "";
+        $("c_last_name").value = data.last_name ?? "";
+        $("c_email").value = data.email ?? "";
+        $("c_dob").value = data.date_of_birth ?? "";
+        $("c_gender").value = data.gender ?? "";
+        $("c_country").value = data.country ?? "";
+        $("c_city").value = data.city ?? "";
+        $("c_phone").value = data.phone ?? "";
+        $("c_subscription").value = data.subscription ?? "";
+        $("c_balance").value = data.account_balance ?? "";
+        $("c_status").value = data.is_active ? "1" : "0";
+        $("c_notes").value = data.notes ?? "";
+        $("consumer-lead").textContent = [
+          `ID ${data.user_id}`,
+          data.registration_date ? `Registered ${data.registration_date}` : null,
+          data.login_count != null ? `${data.login_count} logins` : null,
+          data.referral_code ? `Referral ${data.referral_code}` : null,
+        ].filter(Boolean).join(" · ");
+        $("consumer-error").textContent = "";
+        $("c_dob").max = todayLocal();
+        $("consumer-dialog").showModal();
+      } catch {
+        toast("Network error. Please try again.");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    // Sends only what changed. An optional field that was emptied is sent as null (cleared).
+    async function saveEdit(text) {
+      const { id, original } = editing;
+      const body = {};
+      for (const [key, value] of Object.entries(text)) {
+        if (value !== String(original[key] ?? "")) body[key] = value === "" ? null : value;
+      }
+      const balance = Number($("c_balance").value);
+      if (balance !== Number(original.account_balance)) body.account_balance = balance;
+      const active = $("c_status").value === "1";
+      if (active !== Boolean(original.is_active)) body.is_active = active;
+
+      if (Object.keys(body).length === 0) {
+        $("consumer-dialog").close();
+        toast("No changes to save");
+        return;
+      }
+
+      const data = await sendJson("PATCH", "/api/users/" + id, body, $("consumer-error"), $("consumer-submit"));
+      if (!data) return;
+
+      $("consumer-dialog").close();
+      selectedUser = data;
+      $("orders-title").textContent = `${data.first_name} ${data.last_name}`.trim();
+      await loadUsers();
+      toast("Consumer updated");
+    }
+
     $("consumer-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const map = {
-        first_name: "c_first_name", last_name: "c_last_name", email: "c_email",
-        date_of_birth: "c_dob", country: "c_country", city: "c_city",
-        gender: "c_gender", phone: "c_phone", subscription: "c_subscription",
-        notes: "c_notes",
+      const text = {
+        first_name: $("c_first_name").value.trim(),
+        last_name: $("c_last_name").value.trim(),
+        email: $("c_email").value.trim(),
+        date_of_birth: $("c_dob").value,
+        country: $("c_country").value.trim(),
+        city: $("c_city").value.trim(),
+        gender: $("c_gender").value,
+        phone: $("c_phone").value.trim(),
+        subscription: $("c_subscription").value.trim(),
+        notes: $("c_notes").value.trim(),
       };
+
+      if (editing) { await saveEdit(text); return; }
+
       const body = {};
-      for (const [key, id] of Object.entries(map)) {
-        const v = $(id).value.trim();
-        if (v) body[key] = v;
-      }
+      for (const [key, value] of Object.entries(text)) if (value) body[key] = value;
       if ($("c_balance").value !== "") body.account_balance = Number($("c_balance").value);
 
-      const data = await postJson("/api/users", body, $("consumer-error"), $("consumer-submit"));
+      const data = await sendJson("POST", "/api/users", body, $("consumer-error"), $("consumer-submit"));
       if (!data) return;
 
       $("consumer-dialog").close();
@@ -975,7 +1213,7 @@
         status: $("o_status").value,
         product_category: $("o_category").value,
       };
-      const data = await postJson("/api/orders", body, $("order-error"), $("order-submit"));
+      const data = await sendJson("POST", "/api/orders", body, $("order-error"), $("order-submit"));
       if (!data) return;
 
       $("order-dialog").close();
@@ -989,6 +1227,7 @@
     });
     $("add-consumer").addEventListener("click", openAddConsumer);
     $("add-order").addEventListener("click", openAddOrder);
+    $("edit-consumer").addEventListener("click", openEditConsumer);
 
     $("filters").addEventListener("input", () => {
       clearTimeout(timer);

@@ -1,4 +1,5 @@
 import * as users from "../functions/api/users.js";
+import * as userById from "../functions/api/user-by-id.js";
 import * as orders from "../functions/api/orders.js";
 
 const routes = {
@@ -18,6 +19,18 @@ export default {
       return new Response("Method not allowed", {
         status: 405,
         headers: { allow: "GET, POST" },
+      });
+    }
+
+    // /api/users/123 : read or edit one consumer
+    const byId = url.pathname.match(/^\/api\/users\/([0-9]+)$/);
+    if (byId) {
+      const handlers = { GET: userById.onRequestGet, PATCH: userById.onRequestPatch };
+      const handler = handlers[request.method];
+      if (handler) return handler({ request, env, params: { id: byId[1] } });
+      return new Response("Method not allowed", {
+        status: 405,
+        headers: { allow: "GET, PATCH" },
       });
     }
 

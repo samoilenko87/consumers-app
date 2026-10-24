@@ -1,17 +1,9 @@
 import { getDb, json } from "../../lib/db.js";
 import { requireKey } from "../../lib/auth.js";
-import {
-  ValidationError,
-  readJson,
-  str,
-  isoDate,
-  ageFrom,
-  money,
-  today,
-} from "../../lib/validate.js";
+import { ValidationError, readJson, today } from "../../lib/validate.js";
+import { RULES, ageFrom } from "../../lib/consumer.js";
 
 const FILTERS = ["first_name", "last_name", "email", "country"];
-const GENDERS = ["Male", "Female", "Other"];
 
 export async function onRequestGet({ request, env }) {
   try {
@@ -55,35 +47,23 @@ export async function onRequestPost({ request, env }) {
   try {
     const body = await readJson(request);
 
-    const first_name = str(body, "first_name", { required: true });
-    const last_name = str(body, "last_name", { required: true });
-    const email = str(body, "email", { required: true, max: 254 }).toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new ValidationError("email is not valid");
-    }
-
-    const date_of_birth = isoDate(body, "date_of_birth");
+    // Same order as before, so the first problem reported is unchanged.
+    const first_name = RULES.first_name(body);
+    const last_name = RULES.last_name(body);
+    const email = RULES.email(body);
+    const date_of_birth = RULES.date_of_birth(body);
     const age = ageFrom(date_of_birth);
-    if (age > 120) throw new ValidationError("date_of_birth is not realistic");
-
-    const country = str(body, "country", { required: true });
-    const city = str(body, "city", { required: true });
-
-    const gender = str(body, "gender", { max: 20 });
-    if (gender && !GENDERS.includes(gender)) {
-      throw new ValidationError(`gender must be one of: ${GENDERS.join(", ")}`);
-    }
-    const phone = str(body, "phone", { max: 25 });
-    if (phone && !/^\+?[0-9 ()-]{5,25}$/.test(phone)) {
-      throw new ValidationError("phone is not valid");
-    }
-    const subscription = str(body, "subscription", { max: 30 });
-    const notes = str(body, "notes", { max: 500 });
+    const country = RULES.country(body);
+    const city = RULES.city(body);
+    const gender = RULES.gender(body);
+    const phone = RULES.phone(body);
+    const subscription = RULES.subscription(body);
+    const notes = RULES.notes(body);
 
     const account_balance =
       body.account_balance === undefined || body.account_balance === null
         ? 0
-        : money(body.account_balance, "account_balance", { min: 0, max: 1000000000 });
+        : RULES.account_balance(body);
 
     const referral_code =
       "REF" + (10000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000));
